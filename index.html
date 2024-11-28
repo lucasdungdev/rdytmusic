@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Bot Gợi Ý Nhạc YouTube</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.1/axios.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            background-color: #f4f4f4;
+            padding: 15px;
+        }
+        .container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .input-group {
+            margin-bottom: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+        .input-group > * {
+            flex-grow: 1;
+            min-width: 200px;
+        }
+        #results {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        #viewMode {
+            margin-bottom: 15px;
+        }
+        /* Danh sách */
+        .song-list .song-card {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .song-list .song-card img {
+            width: 100px;
+            height: 70px;
+            object-fit: cover;
+            margin-right: 15px;
+        }
+        /* Large Icon */
+        .song-large-icon {
+            display: flex;
+            flex-direction: column;
+            width: 250px;
+            text-align: center;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+        }
+        .song-large-icon img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            margin-bottom: 10px;
+        }
+        @media (max-width: 600px) {
+            .input-group > * {
+                min-width: 100%;
+            }
+            .song-list .song-card, .song-large-icon {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 Bot Gợi Ý Nhạc YouTube 🎶</h1>
+        
+        <div class="input-group">
+            <input type="text" id="artist" placeholder="Nghệ sĩ">
+            <select id="genre">
+                <option value="">Thể loại</option>
+                <option value="pop">Pop</option>
+                <option value="rock">Rock</option>
+                <option value="hip hop">Hip Hop</option>
+                <option value="electronic">Electronic</option>
+                <option value="ballad">Ballad</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <input type="text" id="description" placeholder="Từ khóa mô tả">
+            <select id="year">
+                <option value="">Năm</option>
+            </select>
+            <select id="month">
+                <option value="">Tháng</option>
+                <option value="01">Tháng 1</option>
+                <option value="12">Tháng 12</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <input type="number" id="minDuration" min="0" placeholder="Thời lượng tối thiểu (phút)">
+            <input type="number" id="maxDuration" min="0" placeholder="Thời lượng tối đa (phút)">
+            <select id="songCount">
+                <option value="1">1 bài</option>
+                <option value="3">3 bài</option>
+                <option value="6">6 bài</option>
+                <option value="12">12 bài</option>
+            </select>
+        </div>
+
+        <div id="viewMode">
+            <label>Chế độ xem: </label>
+            <select id="displayMode">
+                <option value="details">Danh sách chi tiết</option>
+                <option value="large-icon">Biểu tượng lớn</option>
+            </select>
+        </div>
+
+        <button onclick="getRandomSongs()">Gợi Ý Nhạc</button>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const yearSelect = document.getElementById('year');
+        const currentYear = new Date().getFullYear();
+        for (let year = currentYear; year >= 1990; year--) {
+            const option = document.createElement('option');
+            option.value = year;
+            option.textContent = year;
+            yearSelect.appendChild(option);
+        }
+
+        async function getRandomSongs() {
+            const artist = document.getElementById('artist').value;
+            const genre = document.getElementById('genre').value;
+            const description = document.getElementById('description').value;
+            const year = document.getElementById('year').value;
+            const month = document.getElementById('month').value;
+            const minDuration = document.getElementById('minDuration').value;
+            const maxDuration = document.getElementById('maxDuration').value;
+            const songCount = document.getElementById('songCount').value;
+            const displayMode = document.getElementById('displayMode').value;
+
+            const searchTerm = [artist, genre, description].filter(Boolean).join(' ');
+
+            try {
+                const response = await axios.get(`https://youtube.googleapis.com/youtube/v3/search`, {
+                    params: {
+                        part: 'snippet',
+                        maxResults: songCount,
+                        q: searchTerm || 'music',
+                        type: 'video',
+                        publishedAfter: year ? `${year}-${month || '01'}-01T00:00:00Z` : undefined,
+                        publishedBefore: year ? `${year}-${month || '12'}-31T23:59:59Z` : undefined,
+                        key: 'AIzaSyA-bIy7zbKA2DH6RymMFGAAw3Zlhi1YgOM'
+                    }
+                });
+
+                const resultsDiv = document.getElementById('results');
+                resultsDiv.innerHTML = '';
+                resultsDiv.className = displayMode === 'details' ? 'song-list' : 'song-large-icon';
+
+                const filteredVideos = await Promise.all(response.data.items.map(async (video) => {
+                    const videoDetails = await getVideoDuration(video.id.videoId);
+                    const durationInMinutes = videoDetails.durationInMinutes;
+                    
+                    const meetsDurationCriteria = 
+                        (!minDuration || durationInMinutes >= parseInt(minDuration)) &&
+                        (!maxDuration || durationInMinutes <= parseInt(maxDuration));
+                    
+                    return meetsDurationCriteria ? { video, durationInMinutes } : null;
+                }));
+
+                const validVideos = filteredVideos.filter(item => item !== null);
+
+                validVideos.forEach(({ video, durationInMinutes }) => {
+                    const songCard = document.createElement('div');
+                    songCard.className = 'song-card';
+                    
+                    const thumbnailUrl = video.snippet.thumbnails.medium.url;
+                    const thumbnailHtml = `<img src="${thumbnailUrl}" alt="Thumbnail">`;
+                    
+                    if (displayMode === 'details') {
+                        songCard.innerHTML = `
+                            ${thumbnailHtml}
+                            <div>
+                                <h3>${video.snippet.title}</h3>
+                                <p>Kênh: ${video.snippet.channelTitle}</p>
+                                <p>Thời lượng: ${durationInMinutes.toFixed(1)} phút</p>
+                                <a href="https://www.youtube.com/watch?v=${video.id.videoId}" target="_blank">
+                                    Nghe ngay
+                                </a>
+                            </div>
+                        `;
+                    } else {
+                        songCard.innerHTML = `
+                            ${thumbnailHtml}
+                            <h3>${video.snippet.title}</h3>
+                            <p>Kênh: ${video.snippet.channelTitle}</p>
+                            <a href="https://www.youtube.com/watch?v=${video.id.videoId}" target="_blank">
+                                Nghe ngay
+                            </a>
+                        `;
+                    }
+                    
+                    resultsDiv.appendChild(songCard);
+                });
+            } catch (error) {
+                console.error(error);
+                document.getElementById('results').innerHTML = 
+                    'Lỗi: Không thể tải nhạc. Vui lòng thử lại.';
+            }
+        }
+
+        async function getVideoDuration(videoId) {
+            try {
+                const response = await axios.get(`https://youtube.googleapis.com/youtube/v3/videos`, {
+                    params: {
+                        part: 'contentDetails',
+                        id: videoId,
+                        key: 'AIzaSyA-bIy7zbKA2DH6RymMFGAAw3Zlhi1YgOM'
+                    }
+                });
+
+                const duration = response.data.items[0].contentDetails.duration;
+                const durationInMinutes = parseDuration(duration);
+
+                return { duration, durationInMinutes };
+            } catch (error) {
+                console.error('Error getting video duration:', error);
+                return { duration: 'N/A', durationInMinutes: 0 };
+            }
+        }
+
+        function parseDuration(duration) {
+            const match = duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
+            const hours = match[1] ? parseInt(match[1]) : 0;
+            const minutes = match[2] ? parseInt(match[2]) : 0;
+            const seconds = match[3] ? parseInt(match[3]) : 0;
+            return hours * 60 + minutes + seconds / 60;
+        }
+    </script>
+</body>
+</html>
